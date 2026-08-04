@@ -1,0 +1,9 @@
+asgiref    == 3.12.1
+dj-database-url  ==   3.1.2
+Django           ==   6.0.8
+djangorestframework== 3.17.1
+pip          ==       25.1.1
+psycopg2-binary ==    2.9.12
+python-dotenv   ==    1.2.2
+sqlparse      ==      0.5.5
+tzdata         ==     2026.3
