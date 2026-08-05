@@ -44,6 +44,7 @@ class ConversationSerializer(serializers.ModelSerializer):
         participants = validated_data.pop('participants')
         conversation = Conversation.objects.create(**validated_data)
         conversation.participants.add(*participants)
+        
         return conversation
 
     def update(self, instance, validated_data):

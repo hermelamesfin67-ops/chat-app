@@ -9,9 +9,6 @@ class ConversationListCreateView(ListCreateAPIView):
     queryset = Conversation.objects.all()
     serializer_class = ConversationSerializer
 
-    def perform_create(self, serializer):
-        serializer.save(participants=self.request.user)
-
 
 class UserListCreateView(ListCreateAPIView):
     queryset = User.objects.all()
