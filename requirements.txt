@@ -8,3 +8,20 @@ python-dotenv   ==    1.2.2
 sqlparse      ==      0.5.5
 tzdata         ==     2026.3
 gunicorn
+channels == 4.3.2
+daphne == 4.2.3
+pillow==12.3
+rest_framework_simplejwt==0.0.2
+pycparser  == 3.0 
+PyJWT        ==2.13.0
+pyOpenSSL                 ==    26.4.0
+requests                    ==  2.34.2
+rest-framework-simplejwt    ==  0.0.2
+service-identity          ==    26.1.0
+six                        ==   1.17.0
+Twisted                   ==    26.4.0
+txaio                        == 26.6.1
+typing_extensions            == 4.16.0
+ujson                        == 5.13.0
+urllib3                       ==2.7.0
+zope.interface              ==  8.5

@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html>
+<body>
+
+<h2>WebSocket Test</h2>
+
+<input id="message" placeholder="Hello">
+<button onclick="sendMessage()">Send</button>
+
+<div id="chat"></div>
+
+<script>
+const socket = new WebSocket(
+    "ws://127.0.0.1:8000/ws/chat/6/"
+);
+
+socket.onopen = function() {
+    console.log("Connected");
+};
+
+socket.onmessage = function(event) {
+    const data = JSON.parse(event.data);
+    document.getElementById("chat").innerHTML += 
+        "<p>" + data.message + "</p>";
+};
+
+socket.onerror = function(error) {
+    console.log("WebSocket error", error);
+};
+
+function sendMessage() {
+    const message = document.getElementById("message").value;
+
+    socket.send(JSON.stringify({
+        message: message
+    }));
+}
+</script>
+
+</body>
+</html>
