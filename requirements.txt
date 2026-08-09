@@ -11,6 +11,7 @@ channels == 4.3.2
 daphne == 4.2.3
 pillow==12.3
 rest_framework_simplejwt==0.0.2
+djangorestframework-simplejwt
 pycparser  == 3.0 
 PyJWT        ==2.13.0
 pyOpenSSL                 ==    26.4.0
