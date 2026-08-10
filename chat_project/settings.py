@@ -86,6 +86,7 @@ MIDDLEWARE = [
 ]
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:3000",
+    "https://chat-app-fronted-three.vercel.app",
 ]
 
 ROOT_URLCONF = 'chat_project.urls'
