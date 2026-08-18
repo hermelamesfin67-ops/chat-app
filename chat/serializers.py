@@ -1,3 +1,4 @@
+from .models import Conversation, Message
 from rest_framework import serializers
 from .models import Conversation, Message, User
 
@@ -68,7 +69,24 @@ class UserSignupSerializer(serializers.ModelSerializer):
 
         return attrs
 
+    def validate_phone_number(self, value):
+      if value.startswith("0"):
+        value = "+251" + value[1:]
+        return value
+      
+    def validate_phone_number(self, value):
+
+      if User.objects.filter(phone_number=value).exists():
+        raise serializers.ValidationError(
+            "Phone number already exists."
+        )
+
+      return value
+     
+
     def create(self, validated_data):
+        print("CREATE IS RUNNING!")
+
         validated_data.pop("confirm_password")
 
         user = User.objects.create_user(
@@ -82,12 +100,9 @@ class ProfileSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
         fields = ['id', 'username',  'profile_picture', 'bio',
-                          'id', 'phone_number',
-                            'role', 'is_online', 'last_seen']
-        read_only_fields=['is_online', 'last_seen', 'phone_number', 'role']
-
-
-
+                  'id', 'phone_number',
+                  'role', 'is_online', 'last_seen']
+        read_only_fields = ['is_online', 'last_seen', 'phone_number', 'role']
 
 
 class MessageSerializer(serializers.ModelSerializer):
@@ -112,6 +127,46 @@ class MessageSerializer(serializers.ModelSerializer):
         return instance
 
 
+class ChatListSerializer(serializers.ModelSerializer):
+
+    user = serializers.SerializerMethodField()
+    last_message = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Conversation
+        fields = [
+            "id",
+            "user",
+            "last_message",
+            "created_at",
+        ]
+
+    def get_user(self, obj):
+        request = self.context["request"]
+        current_user = request.user
+
+        other_user = obj.participants.exclude(
+            id=current_user.id
+        ).first()
+
+        if not other_user:
+            return None
+
+        return {
+            "id": other_user.id,
+            "name": other_user.username,
+            "avatar": None,
+        }
+
+    def get_last_message(self, obj):
+        message = obj.messages.order_by("-created_at").first()
+
+        if not message:
+            return ""
+
+        return message.text
+
+
 class ConversationSerializer(serializers.ModelSerializer):
     class Meta:
         model = Conversation
@@ -128,3 +183,7 @@ class ConversationSerializer(serializers.ModelSerializer):
         participants = validated_data.pop('participants')
         instance.participants.set(participants)
         return super().update(instance, validated_data)
+class UserSerializers(serializers.ModelSerializer):
+    class Meta:
+        model = User
+        fields = ['id', 'username', 'phone_number', 'profile_picture'] 

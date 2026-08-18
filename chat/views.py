@@ -1,6 +1,6 @@
 from django.shortcuts import render
 from .models import Conversation, Message
-from .serializers import ConversationSerializer, MessageSerializer, PhoneTokenObtainPairSerializer, UserSignupSerializer, ProfileSerializer
+from .serializers import ConversationSerializer, MessageSerializer, PhoneTokenObtainPairSerializer, UserSignupSerializer, ProfileSerializer, UserSerializers, ChatListSerializer
 from django.contrib.auth import get_user_model
 from rest_framework_simplejwt.views import (TokenObtainPairView
                                             )
@@ -10,14 +10,18 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework import status
 from rest_framework_simplejwt.tokens import RefreshToken
+
 User = get_user_model()
 
 
 class PhoneLoginView(TokenObtainPairView):
     serializer_class = PhoneTokenObtainPairSerializer
+
+
 class ProfileView(RetrieveUpdateDestroyAPIView):
     serializer_class = ProfileSerializer
     permission_classes = [IsAuthenticated]
+
     def get_object(self):
         return self.request.user
 
@@ -26,15 +30,18 @@ class ConversationListCreateView(ListCreateAPIView):
     queryset = Conversation.objects.all()
     serializer_class = ConversationSerializer
 
-    def get_queryset(self):
-        return Conversation.objects.filter(participants=self.request.user)
-    permission_classes = [IsAuthenticated]
+    # def get_queryset(self):
+    # return Conversation.objects.filter(participants=self.request.user)
+#    permission_classes = [IsAuthenticated]
 
 
 class UserSignUpView(CreateAPIView):
     serializer_class = UserSignupSerializer
 
 
+class UserListCreateView(ListCreateAPIView):
+    queryset = User.objects.all()
+    serializer_class = UserSerializers
 
 
 class ConversationDetailView(RetrieveUpdateDestroyAPIView):
@@ -56,7 +63,22 @@ class MessageDetailView(RetrieveUpdateDestroyAPIView):
     serializer_class = MessageSerializer
 
 
-# Create your views here.
+class ChatListView(ListCreateAPIView):
+    serializer_class = ChatListSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        print("self", self.request)
+
+        return Conversation.objects.filter(
+            participants=self.request.user
+        ).prefetch_related(
+            "participants",
+            "messages",
+        ).order_by("-created_at")
+    
+
+
 class LogoutView(APIView):
     permission_classes = [IsAuthenticated]
 
@@ -83,6 +105,7 @@ class LogoutView(APIView):
                 {"error": "Invalid refresh token"},
                 status=status.HTTP_400_BAD_REQUEST
             )
+
 
 def websocket_test(request):
     return render(request, "chat/text.html")
