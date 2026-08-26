@@ -70,19 +70,18 @@ class UserSignupSerializer(serializers.ModelSerializer):
         return attrs
 
     def validate_phone_number(self, value):
-      if value.startswith("0"):
-        value = "+251" + value[1:]
-        return value
-      
+        if value.startswith("0"):
+            value = "+251" + value[1:]
+            return value
+
     def validate_phone_number(self, value):
 
-      if User.objects.filter(phone_number=value).exists():
-        raise serializers.ValidationError(
-            "Phone number already exists."
-        )
+        if User.objects.filter(phone_number=value).exists():
+            raise serializers.ValidationError(
+                "Phone number already exists."
+            )
 
-      return value
-     
+        return value
 
     def create(self, validated_data):
         print("CREATE IS RUNNING!")
@@ -110,7 +109,7 @@ class MessageSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Message
-        fields = ('id', 'conversation', 'sender',
+        fields = ( 'conversation', 'sender',
                   'text', 'created_at', 'is_read', 'message_type')
 
     def create(self, validated_data):
@@ -183,7 +182,20 @@ class ConversationSerializer(serializers.ModelSerializer):
         participants = validated_data.pop('participants')
         instance.participants.set(participants)
         return super().update(instance, validated_data)
+
+
 class UserSerializers(serializers.ModelSerializer):
     class Meta:
         model = User
-        fields = ['id', 'username', 'phone_number', 'profile_picture'] 
+        fields = ['id', 'username', 'phone_number',
+                  'profile_picture', 'last_seen']
+
+
+class UserSearchSerializers(serializers.ModelSerializer):
+    profile_picture = serializers.ImageField(read_only=True)
+    is_online = serializers.BooleanField(read_only=True)
+    last_seen = serializers.DateTimeField(read_only=True)   
+    class Meta:
+        model = User
+        fields = ['id', 'username', 'profile_picture', 'last_seen', 'is_online']
+        ordered_by = '-last_seen'

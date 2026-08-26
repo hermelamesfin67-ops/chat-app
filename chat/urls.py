@@ -9,9 +9,10 @@ from .views import (
     UserSignUpView,
     ProfileView,
     LogoutView,
-    UserListCreateView,
-    ChatListView
-
+    UserSearch,
+    ChatListView,
+    UsersDetailView, 
+    UserListView,
 )
 
 from rest_framework_simplejwt.views import TokenRefreshView
@@ -22,7 +23,7 @@ urlpatterns = [
     path('profile/', ProfileView.as_view(), name='my-profile'),
     path('signup/', UserSignUpView.as_view(), name='signup'),
     path("test/", websocket_test, name="test"),
-    path('users/', UserListCreateView.as_view(), name='users'),
+    path('users/search/', UserSearch.as_view(), name='user-search'),
 
     path("conversations/", ConversationListCreateView.as_view(), name='conversations'),
     path("conversations/<int:pk>/", ConversationDetailView.as_view(),
@@ -31,6 +32,8 @@ urlpatterns = [
     path("chats/", ChatListView.as_view(), name='chats'),
     path("messages/<int:pk>/", MessageDetailView.as_view(), name='message-detail'),
     path("logout/", LogoutView.as_view(), name='logout'),
-]
+    path("users/<int:pk>/", UsersDetailView.as_view(), name='user-detail'),
+    path('users/', UserListView.as_view(), name='user-list'),
+    ]
 
 

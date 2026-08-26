@@ -1,10 +1,10 @@
 from django.shortcuts import render
 from .models import Conversation, Message
-from .serializers import ConversationSerializer, MessageSerializer, PhoneTokenObtainPairSerializer, UserSignupSerializer, ProfileSerializer, UserSerializers, ChatListSerializer
+from .serializers import ConversationSerializer, MessageSerializer, PhoneTokenObtainPairSerializer, UserSignupSerializer, ProfileSerializer, UserSerializers, ChatListSerializer,UserSearchSerializers
 from django.contrib.auth import get_user_model
 from rest_framework_simplejwt.views import (TokenObtainPairView
                                             )
-from rest_framework.generics import ListCreateAPIView, RetrieveUpdateDestroyAPIView, CreateAPIView
+from rest_framework.generics import ListCreateAPIView, RetrieveUpdateDestroyAPIView, CreateAPIView, ListAPIView
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -36,26 +36,64 @@ class ConversationListCreateView(ListCreateAPIView):
 
 
 class UserSignUpView(CreateAPIView):
-    serializer_class = UserSignupSerializer
+    serializer_class = UserSerializers
 
 
-class UserListCreateView(ListCreateAPIView):
+class UsersDetailView(RetrieveUpdateDestroyAPIView):
+    queryset = User.objects.all()
+    serializer_class = UserSerializers
+class UserListView(ListAPIView):
     queryset = User.objects.all()
     serializer_class = UserSerializers
 
+User=get_user_model()
+
+
+class UserSearch(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        query = request.query_params.get("q", "").strip()
+
+        
+        if not query:
+            return Response([])
+
+        users = User.objects.filter(
+            username__icontains=query
+        ).exclude(
+            id=request.user.id
+        )[:10]
+
+
+        serializer = UserSearchSerializers(
+            users,
+            many=True,
+            context={"request": request}
+        )
+
+
+
+        return Response(serializer.data)
+    
 
 class ConversationDetailView(RetrieveUpdateDestroyAPIView):
     queryset = Conversation.objects.all()
     serializer_class = ConversationSerializer
 
 
-class MessageListCreateView(ListCreateAPIView):
-    queryset = Message.objects.all()
-    serializer_class = MessageSerializer
-  #  permission_classes = [IsAuthenticated]
 
-   # def perform_create(self, serializer):
-    #   serializer.save(sender=self.request.user)
+
+class MessageListCreateView(ListCreateAPIView):
+    serializer_class = MessageSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        conversation_id = self.request.query_params.get("conversation")
+
+        return Message.objects.filter(
+            conversation_id=conversation_id
+        ).order_by("created_at")
 
 
 class MessageDetailView(RetrieveUpdateDestroyAPIView):
@@ -105,6 +143,8 @@ class LogoutView(APIView):
                 {"error": "Invalid refresh token"},
                 status=status.HTTP_400_BAD_REQUEST
             )
+
+
 
 
 def websocket_test(request):
