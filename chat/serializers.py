@@ -111,7 +111,7 @@ class MessageSerializer(serializers.ModelSerializer):
     class Meta:
         model = Message
         fields = ('id', 'conversation', 'sender',
-                  'content', 'created_at', 'is_read', 'message_type')
+                  'text', 'created_at', 'is_read', 'message_type')
 
     def create(self, validated_data):
         participants = validated_data.pop('participants')
