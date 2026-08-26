@@ -19,6 +19,8 @@ class UserManager(BaseUserManager):
         if not phone_number.startswith("09"):
             raise ValueError("Phone number must start with 09")
         phone_number='+251'+ phone_number[1:]
+        if User is  None:
+            raise ValueError('invalid username or password') 
         
         user = self.model(
             phone_number=phone_number,
