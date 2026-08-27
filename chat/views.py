@@ -98,7 +98,7 @@ class MessageListCreateView(ListCreateAPIView):
 class MessageDetailView(RetrieveUpdateDestroyAPIView):
     queryset = Message.objects.all()
     serializer_class = MessageSerializer
-
+    
 
 class ChatListView(ListCreateAPIView):
     serializer_class = ChatListSerializer
