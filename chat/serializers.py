@@ -105,7 +105,7 @@ class ProfileSerializer(serializers.ModelSerializer):
 
 
 class MessageSerializer(serializers.ModelSerializer):
-    # sender = UserSerializer(read_only=True)
+    sender = UserSignupSerializer(read_only=True)
 
     class Meta:
         model = Message
@@ -113,12 +113,14 @@ class MessageSerializer(serializers.ModelSerializer):
                   'text', 'created_at', 'is_read', 'message_type')
 
     def create(self, validated_data):
-        participants = validated_data.pop('participants')
-        conversation = Conversation.objects.create(**validated_data
-                                                   )
-        conversation.participants.set(*participants
-                                      )
-        return conversation
+        request = self.context['request']
+
+        message = Message.objects.create(
+            sender=request.user,
+            **validated_data
+        )
+
+        return message
 
     def update(self, instance, validated_data):
         instance.content = validated_data.get('content', instance.content)

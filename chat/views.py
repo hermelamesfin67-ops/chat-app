@@ -46,7 +46,6 @@ class UserListView(ListAPIView):
     queryset = User.objects.all()
     serializer_class = UserSerializers
 
-User=get_user_model()
 
 
 class UserSearch(APIView):
@@ -142,7 +141,7 @@ class LogoutView(APIView):
             return Response(
                 {"error": "Invalid refresh token"},
                 status=status.HTTP_400_BAD_REQUEST
-            )
+          )
 
 
 
