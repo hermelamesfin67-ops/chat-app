@@ -1,6 +1,9 @@
 from django.shortcuts import render
 from .models import Conversation, Message
-from .serializers import ConversationSerializer, MessageSerializer, PhoneTokenObtainPairSerializer, UserSignupSerializer, ProfileSerializer, UserSerializers, ChatListSerializer,UserSearchSerializers
+from .serializers import (ConversationSerializer, MessageSerializer,
+                          PhoneTokenObtainPairSerializer, UserSignupSerializer,
+                          ProfileSerializer, UserSerializers, ChatListSerializer,
+                          UserSearchSerializers, ChatRoomSerializer)
 from django.contrib.auth import get_user_model
 from rest_framework_simplejwt.views import (TokenObtainPairView
                                             )
@@ -42,10 +45,11 @@ class UserSignUpView(CreateAPIView):
 class UsersDetailView(RetrieveUpdateDestroyAPIView):
     queryset = User.objects.all()
     serializer_class = UserSerializers
+
+
 class UserListView(ListAPIView):
     queryset = User.objects.all()
     serializer_class = UserSerializers
-
 
 
 class UserSearch(APIView):
@@ -54,7 +58,6 @@ class UserSearch(APIView):
     def get(self, request):
         query = request.query_params.get("q", "").strip()
 
-        
         if not query:
             return Response([])
 
@@ -64,23 +67,44 @@ class UserSearch(APIView):
             id=request.user.id
         )[:10]
 
-
         serializer = UserSearchSerializers(
             users,
             many=True,
             context={"request": request}
         )
 
-
-
         return Response(serializer.data)
-    
+
 
 class ConversationDetailView(RetrieveUpdateDestroyAPIView):
-    queryset = Conversation.objects.all()
     serializer_class = ConversationSerializer
+    permission_classes = [IsAuthenticated]
 
+    def get_queryset(self):
+        return Conversation.objects.filter(
+            participants=self.request.user
+        )
 
+    def perform_update(self, serializer):
+        serializer.save()
+
+    def destroy(self, request, *args, **kwargs):
+        instance = self.get_object()
+
+        if request.user not in instance.participants.all():
+            raise PermissionDenied(
+                "You are not a participant in this conversation."
+            )
+
+        instance.delete()
+
+        return Response(
+            {
+                "success": True,
+                "message": "Conversation deleted successfully."
+            },
+            status=status.HTTP_200_OK
+        )
 
 
 class MessageListCreateView(ListCreateAPIView):
@@ -131,6 +155,8 @@ class MessageDetailView(RetrieveUpdateDestroyAPIView):
             },
             status=status.HTTP_200_OK
         )
+
+
 class ChatListView(ListCreateAPIView):
     serializer_class = ChatListSerializer
     permission_classes = [IsAuthenticated]
@@ -144,8 +170,16 @@ class ChatListView(ListCreateAPIView):
             "participants",
             "messages",
         ).order_by("-created_at")
-    
 
+
+class Chat_RoomListView(ListAPIView):
+    serializer_class = ChatRoomSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        return Conversation.objects.filter(
+            participants=self.request.user
+        ).prefetch_related("participants")
 
 class LogoutView(APIView):
     permission_classes = [IsAuthenticated]
@@ -172,10 +206,12 @@ class LogoutView(APIView):
             return Response(
                 {"error": "Invalid refresh token"},
                 status=status.HTTP_400_BAD_REQUEST
-          )
-
-
+            )
 
 
 def websocket_test(request):
     return render(request, "chat/text.html")
+
+
+
+    

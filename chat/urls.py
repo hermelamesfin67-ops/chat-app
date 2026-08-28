@@ -13,6 +13,7 @@ from .views import (
     ChatListView,
     UsersDetailView, 
     UserListView,
+    Chat_RoomListView,
 )
 
 from rest_framework_simplejwt.views import TokenRefreshView
@@ -24,7 +25,7 @@ urlpatterns = [
     path('signup/', UserSignUpView.as_view(), name='signup'),
     path("test/", websocket_test, name="test"),
     path('users/search/', UserSearch.as_view(), name='user-search'),
-
+    path("chat-rooms/", Chat_RoomListView.as_view(), name='chat_rooms'),
     path("conversations/", ConversationListCreateView.as_view(), name='conversations'),
     path("conversations/<int:pk>/", ConversationDetailView.as_view(),
          name='conversation-detail'),

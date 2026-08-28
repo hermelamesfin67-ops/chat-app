@@ -127,7 +127,7 @@ class MessageSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Message
-        fields = ('id','conversation', 'sender',
+        fields = ('id', 'conversation', 'sender',
                   'text', 'created_at', 'is_read', 'message_type')
 
     def create(self, validated_data):
@@ -156,6 +156,7 @@ class ChatListSerializer(serializers.ModelSerializer):
         fields = [
             "id",
             "user",
+            "profile_picture",
             "last_message",
             "created_at",
         ]
@@ -194,7 +195,6 @@ class ConversationSerializer(serializers.ModelSerializer):
     def create(self, validated_data):
         participants = validated_data.pop("participants")
 
-        
         conversation = (
             Conversation.objects
             .filter(participants__in=participants)
@@ -244,3 +244,26 @@ class UserSearchSerializers(serializers.ModelSerializer):
 #     username = serializers.CharField()
 #     email = serializers.EmailField()
 #     phone_number = serializers.CharField()
+class ChatRoomSerializer(serializers.ModelSerializer):
+    other_user = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Conversation
+        fields = ['id', 'other_user', 'created_at']
+
+    def get_other_user(self, obj):
+        request = self.context["request"]
+        other_user = obj.participants.exclude(
+            id=request.user.id
+        ).first()
+
+        if not other_user:
+            return None
+
+        return {
+            "id": other_user.id,
+            "name": other_user.username,
+            "profile": other_user.profile_picture.url if other_user.profile_picture else None,
+            "status": other_user.is_online,
+            "last_seen": other_user.last_seen,
+        }
