@@ -31,6 +31,7 @@ class PhoneTokenObtainPairSerializer(TokenObtainPairSerializer):
             "user": {
                 "id": user.id,
                 "username": user.username,
+                "email": user.email,
                 "phone_number": user.phone_number,
                 "role": user.role,
                 "profile_picture": (user.profile_picture.url
@@ -50,15 +51,17 @@ class UserSignupSerializer(serializers.ModelSerializer):
     confirm_password = serializers.CharField(
         write_only=True
     )
+    email = serializers.EmailField(required=True)
 
     class Meta:
         model = User
         fields = [
             "username",
+            "email",
             "phone_number",
             "password",
             "confirm_password",
-            "profile_picture"
+            "profile_picture",
         ]
 
     def validate(self, attrs):
@@ -70,13 +73,26 @@ class UserSignupSerializer(serializers.ModelSerializer):
         return attrs
 
     def validate_phone_number(self, value):
-        if value.startswith("0"):
-            value = "+251" + value[1:]
-            return value
 
-    def validate_phone_number(self, value):
+        if not value.isdigit():
+            raise serializers.ValidationError(
+                "Phone number must contain only numbers."
+            )
 
-        if User.objects.filter(phone_number=value).exists():
+        if len(value) != 10:
+            raise serializers.ValidationError(
+                "Phone number must be 10 digits."
+            )
+
+        if not value.startswith("09"):
+            raise serializers.ValidationError(
+                "Phone number must start with 09."
+            )
+
+    # Check the same format that will be stored by UserManager
+        formatted_phone = "+251" + value[1:]
+
+        if User.objects.filter(phone_number=formatted_phone).exists():
             raise serializers.ValidationError(
                 "Phone number already exists."
             )
@@ -87,6 +103,7 @@ class UserSignupSerializer(serializers.ModelSerializer):
         print("CREATE IS RUNNING!")
 
         validated_data.pop("confirm_password")
+        print("PHONE BEFORE CREATE:", validated_data["phone_number"])
 
         user = User.objects.create_user(
             **validated_data
@@ -99,7 +116,7 @@ class ProfileSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
         fields = ['id', 'username',  'profile_picture', 'bio',
-                  'id', 'phone_number',
+                  'email', 'phone_number',
                   'role', 'is_online', 'last_seen']
         read_only_fields = ['is_online', 'last_seen', 'phone_number', 'role']
 
@@ -109,7 +126,7 @@ class MessageSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Message
-        fields = ( 'conversation', 'sender',
+        fields = ('id','conversation', 'sender',
                   'text', 'created_at', 'is_read', 'message_type')
 
     def create(self, validated_data):
@@ -123,7 +140,7 @@ class MessageSerializer(serializers.ModelSerializer):
         return message
 
     def update(self, instance, validated_data):
-        instance.content = validated_data.get('content', instance.content)
+        instance.text = validated_data.get('text', instance.text)
         instance.save()
         return instance
 
@@ -196,8 +213,16 @@ class UserSerializers(serializers.ModelSerializer):
 class UserSearchSerializers(serializers.ModelSerializer):
     profile_picture = serializers.ImageField(read_only=True)
     is_online = serializers.BooleanField(read_only=True)
-    last_seen = serializers.DateTimeField(read_only=True)   
+    last_seen = serializers.DateTimeField(read_only=True)
+
     class Meta:
         model = User
-        fields = ['id', 'username', 'profile_picture', 'last_seen', 'is_online']
+        fields = ['id', 'username', 'profile_picture',
+                  'last_seen', 'is_online']
         ordered_by = '-last_seen'
+
+
+class ForgetPasswordSerializers(serializers.Serializer):
+    username = serializers.CharField()
+    email = serializers.EmailField()
+    phone_number = serializers.CharField()

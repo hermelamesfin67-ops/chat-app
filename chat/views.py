@@ -10,7 +10,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework import status
 from rest_framework_simplejwt.tokens import RefreshToken
-
+from rest_framework.exceptions import PermissionDenied
 User = get_user_model()
 
 
@@ -36,7 +36,7 @@ class ConversationListCreateView(ListCreateAPIView):
 
 
 class UserSignUpView(CreateAPIView):
-    serializer_class = UserSerializers
+    serializer_class = UserSignupSerializer
 
 
 class UsersDetailView(RetrieveUpdateDestroyAPIView):
@@ -98,8 +98,39 @@ class MessageListCreateView(ListCreateAPIView):
 class MessageDetailView(RetrieveUpdateDestroyAPIView):
     queryset = Message.objects.all()
     serializer_class = MessageSerializer
-    
 
+    def get_queryset(self):
+        return Message.objects.filter(
+            conversation__participants=self.request.user
+        )
+
+    def perform_update(self, serializer):
+        message = self.get_object()
+
+        if message.sender != self.request.user:
+            raise PermissionDenied(
+                "You can only edit your own messages."
+            )
+
+        serializer.save()
+
+    def destroy(self, request, *args, **kwargs):
+        instance = self.get_object()
+
+        if instance.sender != request.user:
+            raise PermissionDenied(
+                "You can only delete your own messages."
+            )
+
+        instance.delete()
+
+        return Response(
+            {
+                "success": True,
+                "message": "Message deleted successfully."
+            },
+            status=status.HTTP_200_OK
+        )
 class ChatListView(ListCreateAPIView):
     serializer_class = ChatListSerializer
     permission_classes = [IsAuthenticated]

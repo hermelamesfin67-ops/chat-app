@@ -4,6 +4,8 @@ from django.db import models
 from django.db import models
 from django.conf import settings
 from django.contrib.auth.models import AbstractUser,BaseUserManager
+from datetime import timedelta
+from django.utils import timezone
 
 
 class UserManager(BaseUserManager):
@@ -41,6 +43,7 @@ class User(AbstractUser):
     role = models.CharField(
         max_length=10, choices=ROLE_CHOICES, default="user")
     phone_number=models.CharField(max_length=20, unique=True)
+    email=models.EmailField(null=True, blank=True,unique=True)
     profile_picture = models.ImageField(
         upload_to='profile_pictures/', null=True, blank=True)
     bio = models.CharField(max_length=50, blank=True, null=True)
@@ -88,3 +91,14 @@ class Message(models.Model):
 
     def __str__(self):
         return f"{self.sender}:{self.text[:35]}"
+class PasswordOtpRest(models.Model):
+    user=models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
+    otp=models.CharField(max_length=6)
+    created_at=models.DateTimeField(auto_now_add=True)
+    is_verified=models.BooleanField(default=False)
+
+    def is_expires(self):
+        return  timezone.now() > self.created_at + timedelta(minutes=5)
+
+    def __str__(self):
+       return f"{self.user.username} - {self.otp}"
