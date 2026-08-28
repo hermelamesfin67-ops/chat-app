@@ -1,3 +1,4 @@
+from django.db.models import Count
 from .models import Conversation, Message
 from rest_framework import serializers
 from .models import Conversation, Message, User
@@ -188,19 +189,36 @@ class ChatListSerializer(serializers.ModelSerializer):
 class ConversationSerializer(serializers.ModelSerializer):
     class Meta:
         model = Conversation
-        fields = ('id', 'participants', 'created_at')
+        fields = ("id", "participants", "created_at")
 
     def create(self, validated_data):
-        participants = validated_data.pop('participants')
+        participants = validated_data.pop("participants")
+
+        
+        conversation = (
+            Conversation.objects
+            .filter(participants__in=participants)
+            .annotate(participant_count=Count("participants", distinct=True))
+            .filter(participant_count=2)
+            .first()
+        )
+
+        if conversation:
+            existing_participants = set(
+                conversation.participants.values_list("id", flat=True)
+            )
+            new_participants = set(
+                user.id for user in participants
+            )
+
+            if existing_participants == new_participants:
+                return conversation
+
+        # No existing conversation → create one
         conversation = Conversation.objects.create(**validated_data)
         conversation.participants.add(*participants)
 
         return conversation
-
-    def update(self, instance, validated_data):
-        participants = validated_data.pop('participants')
-        instance.participants.set(participants)
-        return super().update(instance, validated_data)
 
 
 class UserSerializers(serializers.ModelSerializer):
@@ -222,7 +240,7 @@ class UserSearchSerializers(serializers.ModelSerializer):
         ordered_by = '-last_seen'
 
 
-class ForgetPasswordSerializers(serializers.Serializer):
-    username = serializers.CharField()
-    email = serializers.EmailField()
-    phone_number = serializers.CharField()
+# class ForgetPasswordSerializers(serializers.Serializer):
+#     username = serializers.CharField()
+#     email = serializers.EmailField()
+#     phone_number = serializers.CharField()
