@@ -42,6 +42,16 @@ def update_online_status(user_id, is_online):
     print("AFTER:", user.is_online, user.last_seen)
 
 
+@database_sync_to_async
+def mark_messages_as_read(self):
+    Message.objects.filter(
+        conversation_id=self.conversation_id,
+        is_read=False
+    ).exclude(
+        sender=self.user
+    ).update(
+        is_read=True
+    )
 class ChatConsumer(AsyncWebsocketConsumer):
     @database_sync_to_async
     def check_participant(self, room_id, user_id):
@@ -81,6 +91,7 @@ class ChatConsumer(AsyncWebsocketConsumer):
 
         await self.accept()
         await update_online_status(user.id, True)
+        await self.mark_messages_as_read()
 
         print(
             f"User {user.username} connected to room {self.room_id}"

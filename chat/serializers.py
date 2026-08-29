@@ -14,7 +14,7 @@ class PhoneTokenObtainPairSerializer(TokenObtainPairSerializer):
         phone_number = attrs.get('phone_number')
         password = attrs.get('password')
 
-        if phone_number.startswith("09"):
+        if phone_number.startswith(("09", "07")):
             phone_number = '+251' + phone_number[1:]
         elif not phone_number.startswith("+251"):
             raise serializers.ValidationError(
@@ -85,9 +85,10 @@ class UserSignupSerializer(serializers.ModelSerializer):
                 "Phone number must be 10 digits."
             )
 
-        if not value.startswith("09"):
+        if not value.startswith((
+                "09", "07")):
             raise serializers.ValidationError(
-                "Phone number must start with 09."
+                "Phone number must start with 09 or 07."
             )
 
     # Check the same format that will be stored by UserManager
@@ -126,11 +127,18 @@ class MessageSerializer(serializers.ModelSerializer):
     sender = UserSignupSerializer(read_only=True)
     message_id = serializers.IntegerField(source='id', read_only=True)
     conversation_id = serializers.IntegerField()
-
+    
     class Meta:
         model = Message
         fields = ('message_id', 'conversation_id', 'sender',
-                  'text', 'created_at', 'is_read', 'message_type')
+                  'text', 'created_at', 'is_read', 'message_type',"is_updated","updated_at")
+        read_only_fields = (
+            'sender',
+            'created_at',
+            'updated_at',
+            'is_updated',
+        )
+
 
     def create(self, validated_data):
         request = self.context['request']
@@ -140,10 +148,14 @@ class MessageSerializer(serializers.ModelSerializer):
             **validated_data
         )
 
+
+        message.is_read = True
+        message.save()
         return message
 
     def update(self, instance, validated_data):
         instance.text = validated_data.get('text', instance.text)
+        instance.is_updated = True
         instance.save()
         return instance
 
@@ -159,7 +171,7 @@ class ChatListSerializer(serializers.ModelSerializer):
         fields = [
             "conversation_id",
             "other_user",
-            
+
             "last_message",
             "created_at",
         ]
@@ -175,13 +187,12 @@ class ChatListSerializer(serializers.ModelSerializer):
             return None
 
         return {
-                    "id": other_user.id,
-                    "name": other_user.username,
-                    "profile": other_user.profile_picture.url if other_user.profile_picture else None,
-                    "status": other_user.is_online,
-                    "last_seen": other_user.last_seen,
-                }
-        
+            "id": other_user.id,
+            "name": other_user.username,
+            "profile": other_user.profile_picture.url if other_user.profile_picture else None,
+            "status": other_user.is_online,
+            "last_seen": other_user.last_seen,
+        }
 
     def get_last_message(self, obj):
         message = obj.messages.order_by("-created_at").first()

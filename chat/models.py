@@ -18,8 +18,8 @@ class UserManager(BaseUserManager):
             raise ValueError("Phone number must contain only numbers")
         if len(phone_number) != 10:
             raise ValueError(f"Phone number must be 10 digits, you entered {len(phone_number)} digits")
-        if not phone_number.startswith("09"):
-            raise ValueError("Phone number must start with 09")
+        if not phone_number.startswith(("09", "07")):
+            raise ValueError("Phone number must start with 09 or 07")
         phone_number='+251'+ phone_number[1:]
         if User is  None:
             raise ValueError('invalid username or password') 
@@ -49,6 +49,7 @@ class User(AbstractUser):
     bio = models.CharField(max_length=50, blank=True, null=True)
     is_online = models.BooleanField(default=False)
     last_seen = models.DateTimeField(blank=True, null=True)
+    
     USERNAME_FIELD='phone_number'
     REQUIRED_FIELDS=['username']
 
@@ -85,7 +86,8 @@ class Message(models.Model):
     message_type = models.CharField(
         max_length=20, choices=MESSAGE_TYPES, default="text")
     media = models.FileField( upload_to='message/',blank=True, null=True)
-
+    is_updated=models.BooleanField(default=False)
+    updated_at=models.DateTimeField(auto_now=True)
     class meta:
         ordering = ['created_at']
 
