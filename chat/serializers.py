@@ -125,7 +125,7 @@ class ProfileSerializer(serializers.ModelSerializer):
 class MessageSerializer(serializers.ModelSerializer):
     sender = UserSignupSerializer(read_only=True)
     message_id = serializers.IntegerField(source='id', read_only=True)
-    conversation_id = serializers.IntegerField(source='id', read_only=True)
+    conversation_id = serializers.IntegerField()
 
     class Meta:
         model = Message
