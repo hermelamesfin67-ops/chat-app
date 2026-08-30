@@ -14,13 +14,19 @@ def save_message(room_id, user, text):
     saved = Message.objects.create(
         conversation=conversation, sender=user, text=text)
     return {
-        "id": saved.id,
-        "conversation_id": saved.conversation.id,
-        "sender_id": saved.sender.id,
-        "text": saved.text
-
+        "message_id": str(saved.id),
+        "conversation_id": str(saved.conversation.id),
+        "sender": {
+            "username": saved.sender.username,
+            "email": saved.sender.email,
+            "phone_number": saved.sender.phone_number,
+            "profile_picture": "",
+        },
+        "text": saved.text,
+        "created_at": saved.created_at.isoformat(),
+        "is_read": saved.is_read,
+        "message_type": saved.message_type,
     }
-
 
 User = get_user_model()
 
@@ -29,8 +35,8 @@ User = get_user_model()
 def update_online_status(user_id, is_online):
     user = User.objects.get(id=user_id)
 
-    print("USER:", user.username)
-    print("BEFORE:", user.is_online, user.last_seen)
+    # print("USER:", user.username)
+    # print("BEFORE:", user.is_online, user.last_seen)
 
     user.is_online = is_online
 
@@ -163,7 +169,7 @@ class ChatConsumer(AsyncWebsocketConsumer):
 
             import traceback
             traceback.print_exc()
-            
+
 
     async def chat_message(self, event):
         print("========== CHAT MESSAGE ==========")
