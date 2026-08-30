@@ -42,16 +42,6 @@ def update_online_status(user_id, is_online):
     print("AFTER:", user.is_online, user.last_seen)
 
 
-@database_sync_to_async
-def mark_messages_as_read(self):
-    Message.objects.filter(
-        conversation_id=self.conversation_id,
-        is_read=False
-    ).exclude(
-        sender=self.user
-    ).update(
-        is_read=True
-    )
 class ChatConsumer(AsyncWebsocketConsumer):
     @database_sync_to_async
     def check_participant(self, room_id, user_id):
@@ -61,12 +51,18 @@ class ChatConsumer(AsyncWebsocketConsumer):
         ).exists()
 
     async def connect(self):
+
         self.room_id = int(
             self.scope["url_route"]["kwargs"]["room_id"]
         )
         self.room_group_name = f"chat_{self.room_id}"
 
         user = self.scope["user"]
+
+        print("========== CONNECT ==========")
+        print("USER:", user)
+        print("ROOM ID:", self.room_id)
+        print("ROOM GROUP NAME:", self.room_group_name)
 
         if not user.is_authenticated:
             await self.close()
@@ -83,11 +79,16 @@ class ChatConsumer(AsyncWebsocketConsumer):
         if not is_participant:
             await self.close()
             return
+        print("========== GROUP ADD ==========")
+        print("USER:", user.username)
+        print("CHANNEL:", self.channel_name)
+        print("GROUP:", self.room_group_name)
 
         await self.channel_layer.group_add(
             self.room_group_name,
             self.channel_name
         )
+        print("GROUP ADD DONE")
 
         await self.accept()
         await update_online_status(user.id, True)
@@ -95,6 +96,17 @@ class ChatConsumer(AsyncWebsocketConsumer):
 
         print(
             f"User {user.username} connected to room {self.room_id}"
+        )
+
+    @database_sync_to_async
+    def mark_messages_as_read(self):
+        Message.objects.filter(
+            conversation_id=self.room_id,
+            is_read=False
+        ).exclude(
+            sender=self.scope["user"]
+        ).update(
+            is_read=True
         )
 
     async def disconnect(self, close_code):
@@ -116,21 +128,15 @@ class ChatConsumer(AsyncWebsocketConsumer):
         print("========== RECEIVE START ==========")
 
         try:
+            print("RAW:", text_data)
+
             data = json.loads(text_data)
             text = data["text"]
 
-            print("Message received:", text)
+            print("TEXT:", text)
 
-            user = self.scope.get("user")
-
-            print("USER FROM SCOPE:", user)
-
-            if user is None or not user.is_authenticated:
-                print("USER IS NOT AUTHENTICATED")
-                return
-
-            print("Sender:", user)
-            # print("Authenticated:", user.is_authenticated)
+            user = self.scope["user"]
+            print("USER:", user)
 
             saved_message = await save_message(
                 self.room_id,
@@ -138,22 +144,42 @@ class ChatConsumer(AsyncWebsocketConsumer):
                 text
             )
 
-            print("MESSAGE SAVED:", saved_message)
+            print("1️⃣ SAVED:", saved_message)
+
+            print("2️⃣ GROUP:", self.room_group_name)
 
             await self.channel_layer.group_send(
                 self.room_group_name,
                 {
                     "type": "chat_message",
-                    "message": saved_message
+                    "message": saved_message,
                 }
             )
 
+            print("3️⃣ GROUP SEND FINISHED")
+
         except Exception as e:
-            print("RECEIVE ERROR:", repr(e))
+            print("❌ RECEIVE ERROR:", repr(e))
+
+            import traceback
+            traceback.print_exc()
+            
 
     async def chat_message(self, event):
+        print("========== CHAT MESSAGE ==========")
 
-        message = event["message"]
-        await self.send(
-            text_data=json.dumps(message)
-        )
+        try:
+            print("USER:", self.scope["user"])
+            print("EVENT:", event)
+
+            await self.send(
+                text_data=json.dumps(event["message"])
+            )
+
+            print("✅ SENT TO:", self.scope["user"])
+
+        except Exception as e:
+            print("❌ CHAT MESSAGE ERROR:", repr(e))
+
+            import traceback
+            traceback.print_exc()
