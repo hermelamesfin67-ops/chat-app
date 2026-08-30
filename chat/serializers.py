@@ -280,6 +280,7 @@ class ChatRoomSerializer(serializers.ModelSerializer):
             return None
 
         return {
+            
             "id": other_user.id,
             "name": other_user.username,
             "profile": other_user.profile_picture.url if other_user.profile_picture else None,

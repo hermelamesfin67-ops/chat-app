@@ -177,10 +177,18 @@ class Chat_RoomListView(ListAPIView):
     permission_classes = [IsAuthenticated]
 
     def get_queryset(self):
-        return Conversation.objects.filter(
-            participants=self.request.user
-        ).prefetch_related("participants")
+        user = self.request.user
 
+        conversation_id = self.request.query_params.get("conversation")
+
+        queryset = Conversation.objects.filter(
+            participants=user
+        )
+
+        if conversation_id:
+            queryset = queryset.filter(id=conversation_id)
+
+        return queryset
 class LogoutView(APIView):
     permission_classes = [IsAuthenticated]
 
