@@ -14,6 +14,10 @@ from .views import (
     UsersDetailView, 
     UserListView,
     Chat_RoomListView,
+    ForgotPasswordView,
+    VerifyOTPView,
+    ResetPasswordView,
+
 )
 
 from rest_framework_simplejwt.views import TokenRefreshView
@@ -35,6 +39,9 @@ urlpatterns = [
     path("logout/", LogoutView.as_view(), name='logout'),
     path("users/<int:pk>/", UsersDetailView.as_view(), name='user-detail'),
     path('users/', UserListView.as_view(), name='user-list'),
-    ]
+    path( "forgot-password/",ForgotPasswordView.as_view(),name="forgot-password"),
+    path("verify-otp/",VerifyOTPView.as_view(),name="verify-otp"),
+    path( "reset-password/",ResetPasswordView.as_view(),name="reset-password" ),
+]
 
 

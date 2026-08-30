@@ -127,18 +127,17 @@ class MessageSerializer(serializers.ModelSerializer):
     sender = UserSignupSerializer(read_only=True)
     message_id = serializers.IntegerField(source='id', read_only=True)
     conversation_id = serializers.IntegerField()
-    
+
     class Meta:
         model = Message
         fields = ('message_id', 'conversation_id', 'sender',
-                  'text', 'created_at', 'is_read', 'message_type',"is_updated","updated_at")
+                  'text', 'created_at', 'is_read', 'message_type', "is_updated", "updated_at")
         read_only_fields = (
             'sender',
             'created_at',
             'updated_at',
             'is_updated',
         )
-
 
     def create(self, validated_data):
         request = self.context['request']
@@ -147,7 +146,6 @@ class MessageSerializer(serializers.ModelSerializer):
             sender=request.user,
             **validated_data
         )
-
 
         message.is_read = True
         message.save()
@@ -242,7 +240,7 @@ class ConversationSerializer(serializers.ModelSerializer):
 class UserSerializers(serializers.ModelSerializer):
     class Meta:
         model = User
-        fields = ['id', 'username', 'phone_number',
+        fields = ['id', 'username', 'phone_number','email',
                   'profile_picture', 'last_seen']
 
 
@@ -253,7 +251,7 @@ class UserSearchSerializers(serializers.ModelSerializer):
 
     class Meta:
         model = User
-        fields = ['id', 'username', 'profile_picture',
+        fields = ['id', 'username', 'profile_picture','email',
                   'last_seen', 'is_online']
         ordered_by = '-last_seen'
 
@@ -280,10 +278,30 @@ class ChatRoomSerializer(serializers.ModelSerializer):
             return None
 
         return {
-            
+
             "id": other_user.id,
             "name": other_user.username,
             "profile": other_user.profile_picture.url if other_user.profile_picture else None,
             "status": other_user.is_online,
             "last_seen": other_user.last_seen,
         }
+
+
+class ForgotPasswordSerializer(serializers.Serializer):
+    phone_number = serializers.CharField()
+
+
+class ResetPasswordSerializer(serializers.Serializer):
+    phone_number = serializers.CharField()
+    otp = serializers.CharField()
+    new_password = serializers.CharField(
+        min_length=6, write_only=True
+    )
+
+
+    
+
+
+class VerifyOTPSerializer(serializers.Serializer):
+    phone_number = serializers.CharField()
+    otp = serializers.CharField()

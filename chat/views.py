@@ -1,9 +1,16 @@
+from django.conf import settings
+from django.utils import timezone
+from django.core.mail import send_mail
+import random
 from django.shortcuts import render
-from .models import Conversation, Message
+from .models import Conversation, Message, PasswordOtpRest
 from .serializers import (ConversationSerializer, MessageSerializer,
                           PhoneTokenObtainPairSerializer, UserSignupSerializer,
                           ProfileSerializer, UserSerializers, ChatListSerializer,
-                          UserSearchSerializers, ChatRoomSerializer)
+                          UserSearchSerializers, ChatRoomSerializer, ForgotPasswordSerializer,
+                          VerifyOTPSerializer,
+                          ResetPasswordSerializer,
+                          )
 from django.contrib.auth import get_user_model
 from rest_framework_simplejwt.views import (TokenObtainPairView
                                             )
@@ -189,6 +196,8 @@ class Chat_RoomListView(ListAPIView):
             queryset = queryset.filter(id=conversation_id)
 
         return queryset
+
+
 class LogoutView(APIView):
     permission_classes = [IsAuthenticated]
 
@@ -221,5 +230,227 @@ def websocket_test(request):
     return render(request, "chat/text.html")
 
 
+User = get_user_model()
 
-    
+
+class ForgotPasswordView(APIView):
+
+    def post(self, request):
+
+        # print("🔥 FORGOT PASSWORD VIEW CALLED")
+        # print("DATA:", request.data)
+
+        serializer = ForgotPasswordSerializer(
+            data=request.data
+        )
+
+        serializer.is_valid(raise_exception=True)
+
+        # print("✅ SERIALIZER VALID")
+
+        phone_number = serializer.validated_data["phone_number"]
+
+        if phone_number.startswith("0"):
+            phone_number = "+251" + phone_number[1:]
+        # print("📱 PHONE:", phone_number)
+
+        try:
+            user = User.objects.get(
+                phone_number=phone_number
+            )
+
+            # print("👤 USER:", user.username)
+            # print("📧 EMAIL:", user.email)
+
+        except User.DoesNotExist:
+
+            # print("❌ USER NOT FOUND")
+
+            return Response(
+                {
+                    "message": "If the account exists, an OTP has been sent."
+                },
+                status=status.HTTP_200_OK
+            )
+
+        otp = str(random.randint(100000, 999999))
+
+        # print("🔢 OTP:", otp)
+
+        PasswordOtpRest.objects.filter(
+            user=user
+        ).delete()
+
+        PasswordOtpRest.objects.create(
+            user=user,
+            otp=otp
+        )
+
+        
+        # print("💾 OTP SAVED")
+
+        result = send_mail(
+            subject="Chatty Password Reset OTP",
+            message=f"""
+                Hello,
+
+                Your Chatty password reset OTP is:
+
+                {otp}
+
+                This OTP will expire in 5 minutes.
+
+                If you did not request a password reset, please ignore this email.
+
+                — Chatty Team
+                     """,
+            from_email=settings.DEFAULT_FROM_EMAIL,
+            recipient_list=[user.email],
+            fail_silently=False,
+        )
+
+        # print("📧 EMAIL RESULT:", result)
+
+        return Response(
+            {
+                "message": "If the account exists, an OTP has been sent."
+            },
+            status=status.HTTP_200_OK
+        )
+
+
+class VerifyOTPView(APIView):
+
+    def post(self, request):
+
+        serializer = VerifyOTPSerializer(
+            data=request.data
+        )
+
+        serializer.is_valid(raise_exception=True)
+
+        phone_number = serializer.validated_data["phone_number"]
+
+        if phone_number.startswith("0"):
+            phone_number = "+251" + phone_number[1:]
+        otp = serializer.validated_data["otp"]
+
+        try:
+            user = User.objects.get(
+                phone_number=phone_number
+            )
+
+        except User.DoesNotExist:
+
+            return Response(
+                {"error": "Invalid OTP."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        try:
+            otp_record = PasswordOtpRest.objects.get(
+                user=user
+            )
+
+        except PasswordOtpRest.DoesNotExist:
+
+            return Response(
+                {"error": "OTP not found. Please request a new OTP."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        if otp_record.is_expired():
+
+            otp_record.delete()
+
+            return Response(
+                {"error": "OTP has expired. Please request a new one."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        if otp_record.otp != otp:
+
+            return Response(
+                {"error": "Invalid OTP."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        otp_record.is_verified = True
+        otp_record.save(update_fields=["is_verified"])
+
+        return Response(
+            {
+                "message": "OTP verified successfully."
+            },
+            status=status.HTTP_200_OK
+        )
+
+
+class ResetPasswordView(APIView):
+
+    def post(self, request):
+
+        serializer = ResetPasswordSerializer(
+            data=request.data
+        )
+
+        serializer.is_valid(raise_exception=True)
+
+        otp = serializer.validated_data["otp"]
+
+        phone_number = serializer.validated_data["phone_number"]
+
+        if phone_number.startswith("0"):
+            phone_number = "+251" + phone_number[1:]
+        new_password = serializer.validated_data["new_password"]
+        try:
+            user = User.objects.get(
+                phone_number=phone_number
+            )
+
+        except User.DoesNotExist:
+
+            return Response(
+                {"error": "Invalid request."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        try:
+            otp_record = PasswordOtpRest.objects.get(
+                user=user
+            )
+
+        except PasswordOtpRest.DoesNotExist:
+
+            return Response(
+                {"error": "Please request an OTP first."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        if otp_record.is_expired():
+
+            otp_record.delete()
+
+            return Response(
+                {"error": "OTP has expired. Please request a new one."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        if not otp_record.is_verified:
+
+            return Response(
+                {"error": "Please verify your OTP first."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        user.set_password(new_password)
+        user.save()
+
+        otp_record.delete()
+
+        return Response(
+            {
+                "message": "Password reset successfully."
+            },
+            status=status.HTTP_200_OK
+        )
