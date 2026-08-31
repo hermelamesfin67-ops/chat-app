@@ -278,7 +278,10 @@ class ForgotPasswordView(APIView):
 
         return Response(
             {
-                "message": "If the account exists, an OTP has been sent."
+                "message": "If the account exists, an OTP has been sent.",
+                "otp_expires_in": 300,
+                "otp_expires_unit": "seconds"
+            
             },
             status=status.HTTP_200_OK
         )
