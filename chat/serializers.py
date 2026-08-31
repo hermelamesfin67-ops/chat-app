@@ -319,3 +319,28 @@ class ResetPasswordSerializer(serializers.Serializer):
 class VerifyOTPSerializer(serializers.Serializer):
     phone_number = serializers.CharField()
     otp = serializers.CharField()
+class ChangePasswordSerializer(serializers.Serializer):
+    old_password = serializers.CharField()
+    new_password = serializers.CharField(
+        write_only=True,
+        min_length=6
+    )
+
+    confirm_password = serializers.CharField(
+        write_only=True
+    )
+
+    def validate(self, attrs):
+
+        if attrs["new_password"] != attrs["confirm_password"]:
+            raise serializers.ValidationError({
+                "confirm_password": "Passwords do not match."
+            })
+        if attrs["old_password"] == attrs["new_password"]:
+            raise serializers.ValidationError({
+                "new_password": "New password must be different from current password."
+            })
+
+
+        return attrs
+     
