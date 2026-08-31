@@ -1,7 +1,6 @@
-from django.conf import settings
 from django.utils import timezone
-from django.core.mail import send_mail
 import random
+from .email_utils import send_otp_email
 from django.shortcuts import render
 from .models import Conversation, Message, PasswordOtpRest
 from .serializers import (ConversationSerializer, MessageSerializer,
@@ -21,6 +20,7 @@ from rest_framework.views import APIView
 from rest_framework import status
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework.exceptions import PermissionDenied
+
 User = get_user_model()
 
 
@@ -237,34 +237,23 @@ class ForgotPasswordView(APIView):
 
     def post(self, request):
 
-        # print("🔥 FORGOT PASSWORD VIEW CALLED")
-        # print("DATA:", request.data)
-
         serializer = ForgotPasswordSerializer(
             data=request.data
         )
 
         serializer.is_valid(raise_exception=True)
 
-        # print("✅ SERIALIZER VALID")
-
         phone_number = serializer.validated_data["phone_number"]
 
         if phone_number.startswith("0"):
             phone_number = "+251" + phone_number[1:]
-        # print("📱 PHONE:", phone_number)
 
         try:
             user = User.objects.get(
                 phone_number=phone_number
             )
 
-            # print("👤 USER:", user.username)
-            # print("📧 EMAIL:", user.email)
-
         except User.DoesNotExist:
-
-            # print("❌ USER NOT FOUND")
 
             return Response(
                 {
@@ -275,8 +264,6 @@ class ForgotPasswordView(APIView):
 
         otp = str(random.randint(100000, 999999))
 
-        # print("🔢 OTP:", otp)
-
         PasswordOtpRest.objects.filter(
             user=user
         ).delete()
@@ -286,30 +273,7 @@ class ForgotPasswordView(APIView):
             otp=otp
         )
 
-        
-        # print("💾 OTP SAVED")
-
-        result = send_mail(
-            subject="Chatty Password Reset OTP",
-            message=f"""
-                Hello,
-
-                Your Chatty password reset OTP is:
-
-                {otp}
-
-                This OTP will expire in 5 minutes.
-
-                If you did not request a password reset, please ignore this email.
-
-                — Chatty Team
-                     """,
-            from_email=settings.DEFAULT_FROM_EMAIL,
-            recipient_list=[user.email],
-            fail_silently=False,
-        )
-
-        # print("📧 EMAIL RESULT:", result)
+        send_otp_email(user.email, otp)
 
         return Response(
             {
@@ -317,8 +281,6 @@ class ForgotPasswordView(APIView):
             },
             status=status.HTTP_200_OK
         )
-
-
 class VerifyOTPView(APIView):
 
     def post(self, request):
