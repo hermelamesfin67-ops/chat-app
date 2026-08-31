@@ -56,5 +56,5 @@ If you did not request a password reset, please ignore this email.
         return True
 
     except ApiException as e:
-        print("Brevo error:", e)
+        print("BREVO ERROR:", e, flush=True)
         return False
