@@ -292,12 +292,26 @@ class ForgotPasswordSerializer(serializers.Serializer):
 
 
 class ResetPasswordSerializer(serializers.Serializer):
-    phone_number = serializers.CharField()
-    otp = serializers.CharField()
+
+    access_token = serializers.CharField()
+
     new_password = serializers.CharField(
-        min_length=6, write_only=True
+        write_only=True,
+        min_length=6
     )
 
+    confirm_password = serializers.CharField(
+        write_only=True
+    )
+
+    def validate(self, attrs):
+
+        if attrs["new_password"] != attrs["confirm_password"]:
+            raise serializers.ValidationError({
+                "confirm_password": "Passwords do not match."
+            })
+
+        return attrs
 
     
 

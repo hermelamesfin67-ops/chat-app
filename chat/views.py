@@ -20,7 +20,8 @@ from rest_framework.views import APIView
 from rest_framework import status
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework.exceptions import PermissionDenied
-
+from django.core import signing
+from rest_framework.permissions import AllowAny
 User = get_user_model()
 
 
@@ -234,7 +235,7 @@ User = get_user_model()
 
 
 class ForgotPasswordView(APIView):
-
+    permission_classes = [AllowAny]
     def post(self, request):
 
         serializer = ForgotPasswordSerializer(
@@ -272,7 +273,7 @@ class ForgotPasswordView(APIView):
             user=user,
             otp=otp
         )
-
+        print("OTP:", otp)
         send_otp_email(user.email, otp)
 
         return Response(
@@ -282,7 +283,7 @@ class ForgotPasswordView(APIView):
             status=status.HTTP_200_OK
         )
 class VerifyOTPView(APIView):
-
+    permission_classes = [AllowAny]
     def post(self, request):
 
         serializer = VerifyOTPSerializer(
@@ -340,16 +341,22 @@ class VerifyOTPView(APIView):
         otp_record.is_verified = True
         otp_record.save(update_fields=["is_verified"])
 
+        reset_token = signing.dumps(
+            {"user_id": user.id},
+            salt="password-reset"
+        )
+
         return Response(
             {
-                "message": "OTP verified successfully."
+                "message": "OTP verified successfully.",
+                "access_token": reset_token
             },
             status=status.HTTP_200_OK
         )
 
 
 class ResetPasswordView(APIView):
-
+    permission_classes = [AllowAny]
     def post(self, request):
 
         serializer = ResetPasswordSerializer(
@@ -358,57 +365,54 @@ class ResetPasswordView(APIView):
 
         serializer.is_valid(raise_exception=True)
 
-        otp = serializer.validated_data["otp"]
-
-        phone_number = serializer.validated_data["phone_number"]
-
-        if phone_number.startswith("0"):
-            phone_number = "+251" + phone_number[1:]
+        access_token = serializer.validated_data["access_token"]
         new_password = serializer.validated_data["new_password"]
+
+        try:
+            data = signing.loads(
+                access_token,
+                salt="password-reset",
+                max_age=900
+            )
+
+        except signing.SignatureExpired:
+
+            return Response(
+                {
+                    "error": "Reset access token has expired. Please request a new OTP."
+                },
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        except signing.BadSignature:
+
+            return Response(
+                {
+                    "error": "Invalid reset access token."
+                },
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
         try:
             user = User.objects.get(
-                phone_number=phone_number
+                id=data["user_id"]
             )
 
         except User.DoesNotExist:
 
             return Response(
-                {"error": "Invalid request."},
-                status=status.HTTP_400_BAD_REQUEST
-            )
-
-        try:
-            otp_record = PasswordOtpRest.objects.get(
-                user=user
-            )
-
-        except PasswordOtpRest.DoesNotExist:
-
-            return Response(
-                {"error": "Please request an OTP first."},
-                status=status.HTTP_400_BAD_REQUEST
-            )
-
-        if otp_record.is_expired():
-
-            otp_record.delete()
-
-            return Response(
-                {"error": "OTP has expired. Please request a new one."},
-                status=status.HTTP_400_BAD_REQUEST
-            )
-
-        if not otp_record.is_verified:
-
-            return Response(
-                {"error": "Please verify your OTP first."},
+                {
+                    "error": "Invalid request."
+                },
                 status=status.HTTP_400_BAD_REQUEST
             )
 
         user.set_password(new_password)
         user.save()
 
-        otp_record.delete()
+        PasswordOtpRest.objects.filter(
+            user=user
+        ).delete()
 
         return Response(
             {
