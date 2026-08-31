@@ -4,7 +4,19 @@ from django.conf import settings
 
 
 def send_otp_email(to_email, otp):
+    print(
+        "BREVO KEY EXISTS:",
+        bool(settings.BREVO_API_KEY),
+        flush=True
+    )
 
+
+    print(
+    "BREVO KEY PREFIX:",
+    settings.BREVO_API_KEY[:7]
+    if settings.BREVO_API_KEY else None,
+    flush=True
+     )
     configuration = sib_api_v3_sdk.Configuration()
     configuration.api_key["api-key"] = settings.BREVO_API_KEY
 
