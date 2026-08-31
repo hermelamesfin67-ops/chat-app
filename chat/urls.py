@@ -18,6 +18,7 @@ from .views import (
     VerifyOTPView,
     ResetPasswordView,
     ChangePasswordView,
+    TestLogView
 
 )
 
@@ -34,6 +35,7 @@ urlpatterns = [
     path("conversations/", ConversationListCreateView.as_view(), name='conversations'),
     path("conversations/<int:pk>/", ConversationDetailView.as_view(),
          name='conversation-detail'),
+    path("test-log/", TestLogView.as_view(), name='test-log'),
     path("change-password/", ChangePasswordView.as_view(), name='change-password'),
     path("messages/", MessageListCreateView.as_view(), name='messages'),
     path("chats/", ChatListView.as_view(), name='chats'),

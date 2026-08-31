@@ -463,3 +463,13 @@ class ChangePasswordView(APIView):
             },
             status=status.HTTP_200_OK
         )
+
+
+class TestLogView(APIView):
+
+    def get(self, request):
+        print("🔥🔥🔥 TEST LOG FROM CHAT APP 🔥🔥🔥", flush=True)
+
+        return Response({
+            "message": "test endpoint working"
+        })
